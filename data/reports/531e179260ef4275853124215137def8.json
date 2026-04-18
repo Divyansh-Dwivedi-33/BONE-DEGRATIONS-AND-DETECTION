@@ -1,0 +1,37 @@
+{
+  "analysis_id": "531e179260ef4275853124215137def8",
+  "created_at": "2026-04-16T14:55:05.016393+00:00",
+  "patient": {
+    "name": "DIVYANSH DWIVEDI",
+    "age": 45,
+    "sex": "Male",
+    "weight": 78.0,
+    "notes": ""
+  },
+  "image": {
+    "original_filename": "OIP.jpg",
+    "content_type": "image/jpeg"
+  },
+  "prediction": {
+    "label": "Normal",
+    "title": "Healthy bone density",
+    "description": "Bone density appears within the normal range. No significant degenerative changes were detected by the model.",
+    "recommendation": "Maintain bone health with regular exercise, balanced nutrition, and routine follow-up with a qualified clinician.",
+    "severity": "normal",
+    "confidence": 0.9565451145172119,
+    "probabilities": {
+      "Normal": 0.9565451145172119,
+      "Osteopenia": 0.01650901883840561,
+      "Osteoporosis": 0.026945864781737328
+    }
+  },
+  "label": "Normal",
+  "confidence": 0.9565451145172119,
+  "probs": [
+    0.9565451145172119,
+    0.01650901883840561,
+    0.026945864781737328
+  ],
+  "info": "Bone density appears within the normal range. No significant degenerative changes were detected by the model.",
+  "recommendation": "Maintain bone health with regular exercise, balanced nutrition, and routine follow-up with a qualified clinician."
+}

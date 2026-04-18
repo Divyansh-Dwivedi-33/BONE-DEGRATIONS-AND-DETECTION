@@ -1,0 +1,37 @@
+{
+  "analysis_id": "6cbfffa97ce545e8b59de4c92631fb16",
+  "created_at": "2026-04-16T14:35:50.089443+00:00",
+  "patient": {
+    "name": "SHIVAM",
+    "age": 19,
+    "sex": "Male",
+    "weight": 56.0,
+    "notes": ""
+  },
+  "image": {
+    "original_filename": "images.jpeg",
+    "content_type": "image/jpeg"
+  },
+  "prediction": {
+    "label": "Osteoporosis",
+    "title": "Significant bone loss",
+    "description": "The model detected substantial bone density loss that may be consistent with osteoporosis.",
+    "recommendation": "Seek medical evaluation promptly. A clinician may recommend diagnostic confirmation, medication, and fall-prevention planning.",
+    "severity": "critical",
+    "confidence": 0.6551188230514526,
+    "probabilities": {
+      "Normal": 0.3395844101905823,
+      "Osteopenia": 0.005296810530126095,
+      "Osteoporosis": 0.6551188230514526
+    }
+  },
+  "label": "Osteoporosis",
+  "confidence": 0.6551188230514526,
+  "probs": [
+    0.3395844101905823,
+    0.005296810530126095,
+    0.6551188230514526
+  ],
+  "info": "The model detected substantial bone density loss that may be consistent with osteoporosis.",
+  "recommendation": "Seek medical evaluation promptly. A clinician may recommend diagnostic confirmation, medication, and fall-prevention planning."
+}

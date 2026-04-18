@@ -1,0 +1,37 @@
+{
+  "analysis_id": "c3241706e6ea4989b4f7677f3e80ae92",
+  "created_at": "2026-04-16T14:04:43.137396+00:00",
+  "patient": {
+    "name": "Test Patient",
+    "age": 54,
+    "sex": "Female",
+    "weight": 68.5,
+    "notes": "Verification run"
+  },
+  "image": {
+    "original_filename": "Normal_10.png",
+    "content_type": "image/png"
+  },
+  "prediction": {
+    "label": "Normal",
+    "title": "Healthy bone density",
+    "description": "Bone density appears within the normal range. No significant degenerative changes were detected by the model.",
+    "recommendation": "Maintain bone health with regular exercise, balanced nutrition, and routine follow-up with a qualified clinician.",
+    "severity": "normal",
+    "confidence": 0.940186083316803,
+    "probabilities": {
+      "Normal": 0.940186083316803,
+      "Osteopenia": 0.002866320079192519,
+      "Osteoporosis": 0.05694761499762535
+    }
+  },
+  "label": "Normal",
+  "confidence": 0.940186083316803,
+  "probs": [
+    0.940186083316803,
+    0.002866320079192519,
+    0.05694761499762535
+  ],
+  "info": "Bone density appears within the normal range. No significant degenerative changes were detected by the model.",
+  "recommendation": "Maintain bone health with regular exercise, balanced nutrition, and routine follow-up with a qualified clinician."
+}
