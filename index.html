@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OsteoScan Intake Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4efe7;
+            --paper: rgba(255, 250, 242, 0.9);
+            --paper-strong: #fffaf2;
+            --ink: #143b3d;
+            --ink-soft: #4d6868;
+            --teal: #1d6b6f;
+            --teal-dark: #114c4f;
+            --orange: #db7b4a;
+            --orange-deep: #bc6235;
+            --line: rgba(20, 59, 61, 0.12);
+            --success: #2e8b57;
+            --danger: #bb3f2f;
+            --shadow: 0 24px 70px rgba(31, 59, 60, 0.14);
+            --radius-xl: 28px;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Space Grotesk", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(219, 123, 74, 0.22), transparent 30%),
+                radial-gradient(circle at bottom right, rgba(29, 107, 111, 0.2), transparent 32%),
+                linear-gradient(135deg, #f7f0e6 0%, #efe6da 100%);
+        }
+
+        .page-shell {
+            width: min(1180px, calc(100% - 32px));
+            margin: 32px auto;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 32px;
+            background: rgba(255, 255, 255, 0.48);
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .hero-copy,
+        .panel {
+            background: var(--paper);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 16px 36px rgba(20, 59, 61, 0.08);
+        }
+
+        .hero-copy {
+            padding: 34px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-copy::after {
+            content: "";
+            position: absolute;
+            right: -70px;
+            top: -50px;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(219, 123, 74, 0.25), rgba(219, 123, 74, 0));
+            pointer-events: none;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(29, 107, 111, 0.09);
+            color: var(--teal);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--orange);
+            box-shadow: 0 0 0 6px rgba(219, 123, 74, 0.15);
+        }
+
+        h1 {
+            margin: 20px 0 14px;
+            font-family: "Fraunces", serif;
+            font-size: clamp(2.5rem, 4vw, 4.4rem);
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+        }
+
+        .hero-copy p {
+            max-width: 58ch;
+            margin: 0;
+            color: var(--ink-soft);
+            font-size: 1.05rem;
+            line-height: 1.8;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 28px;
+        }
+
+        .stat {
+            padding: 18px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(20, 59, 61, 0.08);
+        }
+
+        .stat strong {
+            display: block;
+            font-size: 1.45rem;
+            color: var(--teal-dark);
+        }
+
+        .stat span {
+            color: var(--ink-soft);
+            font-size: 0.9rem;
+        }
+
+        .panel {
+            padding: 28px;
+        }
+
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .form-header h2,
+        .result-card h3 {
+            margin: 0;
+            font-family: "Fraunces", serif;
+            font-size: 1.9rem;
+            letter-spacing: -0.03em;
+        }
+
+        .form-header p,
+        .result-card p {
+            margin: 8px 0 0;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .status-pill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            background: rgba(46, 139, 87, 0.1);
+            color: var(--success);
+            white-space: nowrap;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .field-group.full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--teal-dark);
+        }
+
+        input,
+        select {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.88);
+            color: var(--ink);
+            font: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: rgba(29, 107, 111, 0.45);
+            box-shadow: 0 0 0 4px rgba(29, 107, 111, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .sex-options {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .sex-options input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .chip {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 14px 12px;
+            background: rgba(255, 255, 255, 0.82);
+            text-align: center;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .sex-options input:checked + .chip {
+            background: rgba(29, 107, 111, 0.12);
+            border-color: rgba(29, 107, 111, 0.45);
+            color: var(--teal-dark);
+            transform: translateY(-1px);
+        }
+
+        .upload-zone {
+            position: relative;
+            border: 1.5px dashed rgba(29, 107, 111, 0.35);
+            border-radius: 22px;
+            padding: 22px;
+            background:
+                linear-gradient(135deg, rgba(29, 107, 111, 0.08), rgba(219, 123, 74, 0.08)),
+                rgba(255, 255, 255, 0.7);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-content {
+            display: grid;
+            grid-template-columns: 84px 1fr;
+            gap: 18px;
+            align-items: center;
+        }
+
+        .upload-icon {
+            width: 84px;
+            height: 84px;
+            border-radius: 22px;
+            display: grid;
+            place-items: center;
+            background: rgba(255, 255, 255, 0.82);
+            color: var(--teal-dark);
+            font-size: 2rem;
+            border: 1px solid rgba(29, 107, 111, 0.12);
+        }
+
+        .upload-copy strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 1rem;
+        }
+
+        .upload-copy span {
+            color: var(--ink-soft);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .cta-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 22px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            border-radius: 16px;
+            padding: 15px 22px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--orange) 0%, var(--orange-deep) 100%);
+            color: white;
+            box-shadow: 0 16px 32px rgba(188, 98, 53, 0.25);
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.76);
+            color: var(--ink);
+            border: 1px solid var(--line);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 0.95fr 1.05fr;
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .preview-card,
+        .result-card {
+            min-height: 360px;
+            padding: 24px;
+            border-radius: var(--radius-xl);
+            background: var(--paper);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            box-shadow: 0 16px 36px rgba(20, 59, 61, 0.08);
+        }
+
+        .preview-frame {
+            height: 250px;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            background:
+                linear-gradient(135deg, rgba(29, 107, 111, 0.06), rgba(219, 123, 74, 0.06)),
+                var(--paper-strong);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+
+        .preview-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .placeholder {
+            max-width: 220px;
+            text-align: center;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .patient-strip {
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(20, 59, 61, 0.08);
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .patient-strip div span {
+            display: block;
+            color: var(--ink-soft);
+            font-size: 0.82rem;
+            margin-bottom: 4px;
+        }
+
+        .patient-strip div strong {
+            font-size: 1rem;
+        }
+
+        .result-shell {
+            display: grid;
+            gap: 18px;
+            height: 100%;
+        }
+
+        .result-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            width: fit-content;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(29, 107, 111, 0.1);
+            color: var(--teal-dark);
+            font-weight: 700;
+        }
+
+        .result-badge::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--teal);
+        }
+
+        .result-box {
+            padding: 20px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(20, 59, 61, 0.08);
+        }
+
+        .result-title {
+            margin: 0 0 8px;
+            font-size: 2rem;
+            font-family: "Fraunces", serif;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 10px 0 0;
+            color: var(--ink-soft);
+        }
+
+        .meter {
+            width: 100%;
+            height: 14px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(20, 59, 61, 0.1);
+            margin: 16px 0 8px;
+        }
+
+        .meter-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--teal) 0%, var(--orange) 100%);
+            transition: width 0.4s ease;
+        }
+
+        .message {
+            margin: 0;
+            color: var(--ink-soft);
+            line-height: 1.7;
+        }
+
+        .status-note {
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(20, 59, 61, 0.05);
+            color: var(--ink-soft);
+            line-height: 1.7;
+        }
+
+        .status-note.error {
+            background: rgba(187, 63, 47, 0.09);
+            color: var(--danger);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(18px);
+            animation: rise 0.7s ease forwards;
+        }
+
+        .delay-1 { animation-delay: 0.08s; }
+        .delay-2 { animation-delay: 0.16s; }
+        .delay-3 { animation-delay: 0.24s; }
+
+        @keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 980px) {
+            .hero,
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .stats,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .patient-strip {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .page-shell {
+                width: min(100% - 18px, 100%);
+                margin: 10px auto;
+                padding: 14px;
+                border-radius: 24px;
+            }
+
+            .hero-copy,
+            .panel,
+            .preview-card,
+            .result-card {
+                padding: 20px;
+            }
+
+            .upload-content {
+                grid-template-columns: 1fr;
+            }
+
+            .sex-options {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-row {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page-shell">
+        <section class="hero">
+            <article class="hero-copy reveal">
+                <span class="eyebrow">Clinical Intake Workspace</span>
+                <h1>Capture patient details and scan an X-ray in one place.</h1>
+                <p>
+                    This front-end page collects patient basics, accepts a knee image upload,
+                    and sends the scan to your AI model for a quick bone-condition prediction.
+                </p>
+
+                <div class="stats">
+                    <div class="stat">
+                        <strong>3-Step</strong>
+                        <span>Intake, upload, analyze</span>
+                    </div>
+                    <div class="stat">
+                        <strong>Live</strong>
+                        <span>Connects to your Flask predictor</span>
+                    </div>
+                    <div class="stat">
+                        <strong>Responsive</strong>
+                        <span>Works on desktop and mobile</span>
+                    </div>
+                </div>
+            </article>
+
+            <section class="panel reveal delay-1">
+                <div class="form-header">
+                    <div>
+                        <h2>Patient Intake Form</h2>
+                        <p>Fill in the basics, upload the scan, then run the AI analysis.</p>
+                    </div>
+                    <span class="status-pill">Ready for Upload</span>
+                </div>
+
+                <form id="analysisForm">
+                    <div class="grid">
+                        <div class="field-group">
+                            <label for="name">Patient Name</label>
+                            <input type="text" id="name" name="name" placeholder="Enter full name" required>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="age">Age</label>
+                            <input type="number" id="age" name="age" min="1" max="120" placeholder="e.g. 54" required>
+                        </div>
+
+                        <div class="field-group full">
+                            <label>Sex</label>
+                            <div class="sex-options">
+                                <label>
+                                    <input type="radio" name="sex" value="Female" required>
+                                    <span class="chip">Female</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="sex" value="Male">
+                                    <span class="chip">Male</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="sex" value="Other">
+                                    <span class="chip">Other</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="field-group full">
+                            <label for="weight">Weight (kg)</label>
+                            <input type="number" id="weight" name="weight" min="1" step="0.1" placeholder="e.g. 68.5" required>
+                        </div>
+
+                        <div class="field-group full">
+                            <label for="imageInput">Upload X-ray Image</label>
+                            <div class="upload-zone">
+                                <input type="file" id="imageInput" name="image" accept="image/*" required>
+                                <div class="upload-content">
+                                    <div class="upload-icon">+</div>
+                                    <div class="upload-copy">
+                                        <strong>Select or drag an image here</strong>
+                                        <span>Accepted formats: JPG, JPEG, PNG, BMP, TIFF. A preview will appear below before analysis.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cta-row">
+                        <button type="submit" class="primary-btn">Analyze Image</button>
+                        <button type="reset" class="secondary-btn">Clear Form</button>
+                    </div>
+                </form>
+            </section>
+        </section>
+
+        <section class="dashboard">
+            <article class="preview-card reveal delay-2">
+                <div class="form-header">
+                    <div>
+                        <h2>Image Preview</h2>
+                        <p>Confirm the patient and the uploaded scan before submitting.</p>
+                    </div>
+                </div>
+
+                <div class="preview-frame" id="previewFrame">
+                    <div class="placeholder" id="previewPlaceholder">
+                        Upload a knee image to preview it here before the AI review starts.
+                    </div>
+                    <img id="previewImage" alt="X-ray preview" hidden>
+                </div>
+
+                <div class="patient-strip">
+                    <div>
+                        <span>Name</span>
+                        <strong id="summaryName">Not provided yet</strong>
+                    </div>
+                    <div>
+                        <span>Age</span>
+                        <strong id="summaryAge">-</strong>
+                    </div>
+                    <div>
+                        <span>Sex</span>
+                        <strong id="summarySex">-</strong>
+                    </div>
+                    <div>
+                        <span>Weight</span>
+                        <strong id="summaryWeight">-</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="result-card reveal delay-3">
+                <div class="result-shell">
+                    <div>
+                        <span class="result-badge">AI Analysis Output</span>
+                        <h3>Prediction Result</h3>
+                        <p>The current AI model uses the uploaded image for classification. Patient details are captured for the intake workflow.</p>
+                    </div>
+
+                    <div class="result-box">
+                        <div class="message" id="resultLabel">Submit the form to receive a diagnosis prediction.</div>
+                        <div class="meter">
+                            <div class="meter-fill" id="confidenceBar"></div>
+                        </div>
+                        <div class="result-meta">
+                            <span id="confidenceText">Confidence: --</span>
+                            <span id="fileNameText">Image: --</span>
+                        </div>
+                    </div>
+
+                    <div class="status-note" id="statusBox">
+                        Waiting for patient details and image upload.
+                    </div>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <script>
+        const form = document.getElementById("analysisForm");
+        const imageInput = document.getElementById("imageInput");
+        const previewImage = document.getElementById("previewImage");
+        const previewPlaceholder = document.getElementById("previewPlaceholder");
+
+        const summaryName = document.getElementById("summaryName");
+        const summaryAge = document.getElementById("summaryAge");
+        const summarySex = document.getElementById("summarySex");
+        const summaryWeight = document.getElementById("summaryWeight");
+
+        const resultLabel = document.getElementById("resultLabel");
+        const confidenceBar = document.getElementById("confidenceBar");
+        const confidenceText = document.getElementById("confidenceText");
+        const fileNameText = document.getElementById("fileNameText");
+        const statusBox = document.getElementById("statusBox");
+
+        function getApiUrl() {
+            if (window.location.protocol === "file:") {
+                return "http://127.0.0.1:5000/predict";
+            }
+            return `${window.location.origin}/predict`;
+        }
+
+        function updateSummary() {
+            const formData = new FormData(form);
+            summaryName.textContent = formData.get("name") || "Not provided yet";
+            summaryAge.textContent = formData.get("age") ? `${formData.get("age")} years` : "-";
+            summarySex.textContent = formData.get("sex") || "-";
+            summaryWeight.textContent = formData.get("weight") ? `${formData.get("weight")} kg` : "-";
+        }
+
+        function setStatus(message, isError = false) {
+            statusBox.textContent = message;
+            statusBox.classList.toggle("error", isError);
+        }
+
+        function previewSelectedImage(file) {
+            if (!file) {
+                previewImage.hidden = true;
+                previewImage.removeAttribute("src");
+                previewPlaceholder.hidden = false;
+                fileNameText.textContent = "Image: --";
+                return;
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+            previewImage.src = objectUrl;
+            previewImage.hidden = false;
+            previewPlaceholder.hidden = true;
+            fileNameText.textContent = `Image: ${file.name}`;
+
+            previewImage.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+            };
+        }
+
+        form.addEventListener("input", updateSummary);
+        form.addEventListener("change", updateSummary);
+
+        imageInput.addEventListener("change", () => {
+            const file = imageInput.files[0];
+            previewSelectedImage(file);
+            if (file) {
+                setStatus("Image selected. Review the preview and click Analyze Image when ready.");
+            }
+        });
+
+        form.addEventListener("reset", () => {
+            window.setTimeout(() => {
+                updateSummary();
+                previewSelectedImage(null);
+                resultLabel.textContent = "Submit the form to receive a diagnosis prediction.";
+                confidenceBar.style.width = "0%";
+                confidenceText.textContent = "Confidence: --";
+                fileNameText.textContent = "Image: --";
+                setStatus("Waiting for patient details and image upload.");
+            }, 0);
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            updateSummary();
+
+            const file = imageInput.files[0];
+            if (!file) {
+                setStatus("Please upload an X-ray image before starting the analysis.", true);
+                return;
+            }
+
+            const formData = new FormData(form);
+            setStatus("Analyzing the uploaded image. Please wait...");
+            resultLabel.textContent = "Running AI prediction...";
+            confidenceBar.style.width = "0%";
+            confidenceText.textContent = "Confidence: processing...";
+
+            try {
+                const response = await fetch(getApiUrl(), {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || "Prediction failed.");
+                }
+
+                const confidenceValue = Number(data.confidence || 0);
+                resultLabel.innerHTML = `<span class="result-title">${data.label}</span><p class="message">${data.info}</p>`;
+                confidenceBar.style.width = `${Math.max(0, Math.min(confidenceValue * 100, 100))}%`;
+                confidenceText.textContent = `Confidence: ${(confidenceValue * 100).toFixed(2)}%`;
+                setStatus("Analysis complete. You can review the result and upload another image if needed.");
+            } catch (error) {
+                resultLabel.textContent = "Unable to complete the prediction.";
+                confidenceBar.style.width = "0%";
+                confidenceText.textContent = "Confidence: --";
+                setStatus(error.message || "Error connecting to the prediction server.", true);
+            }
+        });
+
+        updateSummary();
+    </script>
+</body>
+</html>

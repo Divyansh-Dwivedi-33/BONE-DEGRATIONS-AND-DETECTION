@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OsteoScan AI — Knee Bone Condition Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  /* ── RESET & BASE ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:       #0b1c3a;
+    --navy-mid:   #122444;
+    --navy-light: #1a3260;
+    --cyan:       #00c8e0;
+    --cyan-dim:   #0099b0;
+    --cyan-glow:  rgba(0,200,224,0.18);
+    --slate:      #a8bed8;
+    --slate-dim:  #6888a8;
+    --white:      #f0f6ff;
+    --card-bg:    rgba(255,255,255,0.04);
+    --card-border:rgba(0,200,224,0.15);
+    --success:    #00e89c;
+    --warning:    #ffc14d;
+    --danger:     #ff5f6d;
+    --radius:     14px;
+    --radius-sm:  8px;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── ANIMATED BACKGROUND ──────────────────────────── */
+  .bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* Skeleton X-ray grid pattern */
+  .bg-canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(0,200,224,0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(0,110,180,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(11,28,58,0) 0%, var(--navy) 80%);
+  }
+
+  /* Floating anatomical circles */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0,200,224,0.08);
+    animation: orb-drift 20s ease-in-out infinite;
+  }
+  .orb-1 { width: 600px; height: 600px; top: -200px; right: -100px; animation-delay: 0s; }
+  .orb-2 { width: 400px; height: 400px; bottom: -100px; left: -80px; animation-delay: -8s; }
+  .orb-3 { width: 250px; height: 250px; top: 40%; left: 15%; animation-delay: -14s; border-color: rgba(0,200,224,0.05); }
+
+  @keyframes orb-drift {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33% { transform: translate(20px,-30px) scale(1.03); }
+    66% { transform: translate(-15px,20px) scale(0.97); }
+  }
+
+  /* Bone scan lines */
+  .scan-lines {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,200,224,0.012) 3px,
+      rgba(0,200,224,0.012) 4px
+    );
+  }
+
+  /* Grid dots */
+  .bg-dots {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(0,200,224,0.12) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+  }
+
+  /* ── LAYOUT ───────────────────────────────────────── */
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+
+  /* ── HEADER ───────────────────────────────────────── */
+  header {
+    padding: 36px 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 40px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--cyan) 0%, #0088bb 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(0,200,224,0.3);
+  }
+
+  .brand-icon svg { width: 28px; height: 28px; fill: white; }
+
+  .brand-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    letter-spacing: -0.5px;
+    color: var(--white);
+  }
+
+  .brand-name span { color: var(--cyan); }
+
+  .brand-tag {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--slate-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .header-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(0,200,224,0.08);
+    border: 1px solid rgba(0,200,224,0.2);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--cyan);
+    letter-spacing: 0.5px;
+  }
+
+  .header-badge .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* ── STEP PROGRESS BAR ────────────────────────────── */
+  .steps-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+  }
+
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .step-item:last-child { flex: 0; }
+
+  .step-circle {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--card-border);
+    background: var(--card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--slate-dim);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+  }
+
+  .step-circle.active {
+    border-color: var(--cyan);
+    background: var(--cyan-glow);
+    color: var(--cyan);
+    box-shadow: 0 0 12px var(--cyan-glow);
+  }
+
+  .step-circle.done {
+    border-color: var(--success);
+    background: rgba(0,232,156,0.1);
+    color: var(--success);
+  }
+
+  .step-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--slate-dim);
+    white-space: nowrap;
+    transition: color 0.3s;
+  }
+
+  .step-label.active { color: var(--cyan); }
+  .step-label.done   { color: var(--success); }
+
+  .step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--card-border);
+    margin: 0 10px;
+    transition: background 0.3s;
+  }
+  .step-line.done { background: var(--success); }
+
+  /* ── CARDS ────────────────────────────────────────── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .card:hover {
+    border-color: rgba(0,200,224,0.28);
+    box-shadow: 0 4px 30px rgba(0,200,224,0.06);
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title svg { width: 15px; height: 15px; fill: var(--cyan); opacity: 0.8; }
+
+  /* ── GRID ─────────────────────────────────────────── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+    header { flex-direction: column; gap: 16px; align-items: flex-start; }
+    .steps-bar { display: none; }
+  }
+
+  /* ── FORM ELEMENTS ────────────────────────────────── */
+  .field { margin-bottom: 20px; }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--slate-dim);
+    margin-bottom: 8px;
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(0,200,224,0.18);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--white);
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .field input::placeholder { color: var(--slate-dim); opacity: 0.6; }
+
+  .field input:focus,
+  .field select:focus {
+    border-color: var(--cyan);
+    background: rgba(0,200,224,0.05);
+    box-shadow: 0 0 0 3px rgba(0,200,224,0.1);
+  }
+
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300c8e0' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  .field select option {
+    background: #0f2040;
+    color: var(--white);
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* ── UPLOAD ZONE ──────────────────────────────────── */
+  .upload-zone {
+    border: 1.5px dashed rgba(0,200,224,0.25);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(0,200,224,0.02);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone:hover,
+  .upload-zone.drag-over {
+    border-color: var(--cyan);
+    background: var(--cyan-glow);
+    box-shadow: 0 0 20px rgba(0,200,224,0.1);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    width: 52px; height: 52px;
+    margin: 0 auto 14px;
+    background: rgba(0,200,224,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0,200,224,0.2);
+  }
+
+  .upload-icon svg { width: 24px; height: 24px; stroke: var(--cyan); fill: none; }
+
+  .upload-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+
+  .upload-sub {
+    font-size: 12px;
+    color: var(--slate-dim);
+  }
+
+  /* Preview image */
+  #preview-wrap {
+    display: none;
+    margin-top: 20px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    position: relative;
+  }
+
+  #preview-wrap img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    display: block;
+    filter: grayscale(30%) contrast(1.1);
+  }
+
+  .preview-label {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(11,28,58,0.9));
+    padding: 16px 12px 10px;
+    font-size: 11px;
+    color: var(--slate);
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+  }
+
+  /* X-ray overlay effect on preview */
+  #preview-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,200,224,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── ANALYSE BUTTON ───────────────────────────────── */
+  .analyse-btn {
+    width: 100%;
+    padding: 15px 24px;
+    background: linear-gradient(135deg, var(--cyan) 0%, var(--cyan-dim) 100%);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy);
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.25s;
+    box-shadow: 0 4px 20px rgba(0,200,224,0.25);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analyse-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.2s;
+  }
+
+  .analyse-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(0,200,224,0.35); }
+  .analyse-btn:hover::after { background: rgba(255,255,255,0.08); }
+  .analyse-btn:active { transform: translateY(0); }
+
+  .analyse-btn:disabled {
+    background: rgba(0,200,224,0.15);
+    color: var(--slate-dim);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .analyse-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+  /* ── LOADING ANIMATION ────────────────────────────── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(11,28,58,0.3);
+    border-top-color: var(--navy);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULTS PANEL ────────────────────────────────── */
+  #results-panel { display: none; }
+
+  .result-hero {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 22px 24px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 26px;
+    border: 1px solid;
+    transition: all 0.5s;
+  }
+
+  .result-hero.normal     { background: rgba(0,232,156,0.07);  border-color: rgba(0,232,156,0.25); }
+  .result-hero.osteopenia { background: rgba(255,193,77,0.07);  border-color: rgba(255,193,77,0.25); }
+  .result-hero.osteoporosis { background: rgba(255,95,109,0.07); border-color: rgba(255,95,109,0.25); }
+
+  .result-badge {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 26px;
+  }
+
+  .result-badge.normal     { background: rgba(0,232,156,0.15); }
+  .result-badge.osteopenia { background: rgba(255,193,77,0.15); }
+  .result-badge.osteoporosis { background: rgba(255,95,109,0.15); }
+
+  .result-text .result-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+
+  .result-text .result-name.normal     { color: var(--success); }
+  .result-text .result-name.osteopenia { color: var(--warning); }
+  .result-text .result-name.osteoporosis { color: var(--danger); }
+
+  .result-text .result-desc {
+    font-size: 13px;
+    color: var(--slate);
+    line-height: 1.5;
+    max-width: 400px;
+  }
+
+  .result-confidence {
+    margin-left: auto;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .confidence-ring {
+    position: relative;
+    width: 64px; height: 64px;
+    margin: 0 auto 4px;
+  }
+
+  .confidence-ring svg { transform: rotate(-90deg); }
+
+  .confidence-ring .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 5; }
+  .confidence-ring .ring-fill {
+    fill: none;
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 175.9;
+    stroke-dashoffset: 175.9;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .confidence-pct {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--white);
+  }
+
+  .confidence-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--slate-dim);
+  }
+
+  /* ── PROBABILITY BARS ─────────────────────────────── */
+  .prob-section { margin-bottom: 24px; }
+
+  .prob-section h4 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--slate-dim);
+    margin-bottom: 14px;
+  }
+
+  .prob-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .prob-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--slate);
+    width: 110px;
+    flex-shrink: 0;
+  }
+
+  .prob-bar-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .prob-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  .prob-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--slate-dim);
+    width: 42px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ── PATIENT SUMMARY ──────────────────────────────── */
+  .patient-summary {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .ps-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ps-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--slate-dim);
+  }
+
+  .ps-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--white);
+  }
+
+  .ps-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255,255,255,0.07);
+  }
+
+  /* ── RECOMMENDATION BOX ───────────────────────────── */
+  .recommendation {
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    margin-top: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border: 1px solid;
+  }
+
+  .recommendation.normal     { background: rgba(0,232,156,0.04);  border-color: rgba(0,232,156,0.15); }
+  .recommendation.osteopenia { background: rgba(255,193,77,0.04);  border-color: rgba(255,193,77,0.15); }
+  .recommendation.osteoporosis { background: rgba(255,95,109,0.04); border-color: rgba(255,95,109,0.15); }
+
+  .rec-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+
+  .rec-text { font-size: 13px; line-height: 1.6; color: var(--slate); }
+  .rec-text strong { color: var(--white); font-weight: 500; }
+
+  /* ── RESET BUTTON ─────────────────────────────────── */
+  .reset-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius-sm);
+    padding: 10px 18px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--slate);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover {
+    border-color: rgba(255,255,255,0.22);
+    color: var(--white);
+    background: rgba(255,255,255,0.04);
+  }
+
+  /* ── ERROR MESSAGE ────────────────────────────────── */
+  .error-msg {
+    display: none;
+    background: rgba(255,95,109,0.08);
+    border: 1px solid rgba(255,95,109,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #ff8090;
+    margin-bottom: 16px;
+  }
+
+  /* ── DISCLAIMER FOOTER ────────────────────────────── */
+  .disclaimer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--slate-dim);
+    opacity: 0.6;
+    margin-top: 48px;
+    line-height: 1.6;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── FADE-IN ANIMATIONS ───────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in { animation: fadeUp 0.5s ease forwards; }
+
+  .fade-in-1 { animation-delay: 0.05s; opacity: 0; }
+  .fade-in-2 { animation-delay: 0.12s; opacity: 0; }
+  .fade-in-3 { animation-delay: 0.2s;  opacity: 0; }
+  .fade-in-4 { animation-delay: 0.28s; opacity: 0; }
+  .fade-in-5 { animation-delay: 0.36s; opacity: 0; }
+
+  /* ── SCANNING ANIMATION (while analysing) ─────────── */
+  .scan-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(11,28,58,0.88);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .scan-overlay.active { display: flex; }
+
+  .scan-box {
+    width: 200px; height: 200px;
+    border: 1.5px solid var(--cyan-dim);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    background: rgba(0,200,224,0.03);
+  }
+
+  .scan-line-anim {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: scan-move 1.6s ease-in-out infinite;
+    box-shadow: 0 0 12px var(--cyan);
+  }
+
+  @keyframes scan-move {
+    0%   { top: 0%;   opacity: 1; }
+    48%  { top: 100%; opacity: 1; }
+    50%  { top: 100%; opacity: 0; }
+    52%  { top: 0%;   opacity: 0; }
+    54%  { top: 0%;   opacity: 1; }
+    100% { top: 100%; opacity: 1; }
+  }
+
+  .scan-corners::before, .scan-corners::after,
+  .scan-corners > span::before, .scan-corners > span::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    border-color: var(--cyan);
+    border-style: solid;
+    opacity: 0.8;
+  }
+  .scan-corners::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .scan-corners::after  { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .scan-corners > span::before { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+  .scan-corners > span::after  { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+  .scan-icon-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scan-icon-inner svg {
+    width: 64px;
+    height: 64px;
+    opacity: 0.12;
+  }
+
+  .scan-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    letter-spacing: 1.5px;
+    text-align: center;
+  }
+
+  .scan-sub {
+    font-size: 11px;
+    color: var(--slate-dim);
+    letter-spacing: 1px;
+    margin-top: 4px;
+    text-align: center;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- BACKGROUND -->
+<div class="bg-canvas">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="scan-lines"></div>
+  <div class="bg-dots"></div>
+</div>
+
+<!-- SCAN OVERLAY (loading state) -->
+<div class="scan-overlay" id="scan-overlay">
+  <div class="scan-box">
+    <div class="scan-corners"><span></span></div>
+    <div class="scan-icon-inner">
+      <svg viewBox="0 0 80 80" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <!-- Simple bone silhouette -->
+        <ellipse cx="15" cy="20" rx="10" ry="8"/>
+        <ellipse cx="65" cy="20" rx="10" ry="8"/>
+        <ellipse cx="15" cy="60" rx="10" ry="8"/>
+        <ellipse cx="65" cy="60" rx="10" ry="8"/>
+        <rect x="18" y="15" width="44" height="10" rx="3"/>
+        <rect x="18" y="55" width="44" height="10" rx="3"/>
+        <rect x="32" y="20" width="16" height="40" rx="3"/>
+      </svg>
+    </div>
+    <div class="scan-line-anim"></div>
+  </div>
+  <div>
+    <div class="scan-status" id="scan-msg">ANALYSING X-RAY</div>
+    <div class="scan-sub">DenseNet121 · Running inference…</div>
+  </div>
+</div>
+
+<!-- MAIN WRAPPER -->
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header class="fade-in fade-in-1">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="6" cy="7" rx="5" ry="4"/>
+          <ellipse cx="22" cy="7" rx="5" ry="4"/>
+          <ellipse cx="6" cy="21" rx="5" ry="4"/>
+          <ellipse cx="22" cy="21" rx="5" ry="4"/>
+          <rect x="7" y="4" width="14" height="6" rx="2"/>
+          <rect x="7" y="18" width="14" height="6" rx="2"/>
+          <rect x="11" y="8" width="6" height="12" rx="2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Osteo<span>Scan</span> AI</div>
+        <div class="brand-tag">Bone Condition Classifier · DenseNet121</div>
+      </div>
+    </div>
+    <div class="header-badge">
+      <div class="dot"></div>
+      Model Ready
+    </div>
+  </header>
+
+  <!-- STEPS -->
+  <div class="steps-bar fade-in fade-in-2" id="steps-bar">
+    <div class="step-item">
+      <div class="step-circle active" id="step-1-circle">1</div>
+      <div class="step-label active" id="step-1-label">Patient Info</div>
+    </div>
+    <div class="step-line" id="line-1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="step-2-circle">2</div>
+      <div class="step-label" id="step-2-label">Upload X-Ray</div>
+    </div>
+    <div class="step-line" id="line-2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="step-3-circle">3</div>
+      <div class="step-label" id="step-3-label">Analyse</div>
+    </div>
+    <div class="step-line" id="line-3"></div>
+    <div class="step-item">
+      <div class="step-circle" id="step-4-circle">4</div>
+      <div class="step-label" id="step-4-label">Results</div>
+    </div>
+  </div>
+
+  <!-- FORM SECTION -->
+  <div id="form-section">
+
+    <!-- PATIENT INFO + UPLOAD (two columns) -->
+    <div class="two-col">
+
+      <!-- Left: Patient Info -->
+      <div class="card fade-in fade-in-2">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="5" r="3.5"/>
+            <path d="M1.5 14c0-3.038 2.91-5.5 6.5-5.5s6.5 2.462 6.5 5.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+          </svg>
+          Patient Details
+        </div>
+
+        <div class="error-msg" id="error-msg">Please fill in all required fields correctly.</div>
+
+        <div class="field">
+          <label for="name">Full Name *</label>
+          <input type="text" id="name" placeholder="e.g. Rahul Sharma" autocomplete="off" />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="age">Age *</label>
+            <input type="number" id="age" placeholder="e.g. 52" min="1" max="120" />
+          </div>
+          <div class="field">
+            <label for="sex">Biological Sex *</label>
+            <select id="sex">
+              <option value="" disabled selected>Select</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="weight">Weight (kg) *</label>
+          <input type="number" id="weight" placeholder="e.g. 72" min="1" max="300" step="0.1" />
+        </div>
+
+        <div class="field">
+          <label for="notes">Clinical Notes (optional)</label>
+          <input type="text" id="notes" placeholder="e.g. Previous fracture, vitamin D deficiency" />
+        </div>
+      </div>
+
+      <!-- Right: Upload -->
+      <div class="card fade-in fade-in-3">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2" fill="none"/>
+            <circle cx="5.5" cy="5.5" r="1.5" fill="currentColor"/>
+            <path d="M2 11l4-4 3 3 2-2 3 2.5" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Knee X-Ray Image
+        </div>
+
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.tiff,.tif" />
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="upload-title">Drop X-ray image here</div>
+          <div class="upload-sub">or click to browse · JPG, PNG, BMP, TIFF</div>
+        </div>
+
+        <div id="preview-wrap">
+          <img id="preview-img" src="" alt="X-ray preview" />
+          <div class="preview-label" id="preview-label">IMG_LOADED · 224×224 · READY FOR ANALYSIS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYSE BUTTON -->
+    <div class="fade-in fade-in-4" style="max-width: 420px; margin: 0 auto 10px;">
+      <button class="analyse-btn" id="analyse-btn" disabled>
+        <div class="spinner" id="btn-spinner"></div>
+        <svg id="btn-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="9" cy="9" r="7"/>
+          <path d="M9 6v3l2 2"/>
+        </svg>
+        Run AI Analysis
+      </button>
+    </div>
+
+  </div><!-- /form-section -->
+
+  <!-- RESULTS SECTION -->
+  <div id="results-panel" class="fade-in">
+
+    <!-- Patient summary strip -->
+    <div class="patient-summary" id="patient-summary-bar">
+      <div class="ps-item">
+        <div class="ps-label">Patient</div>
+        <div class="ps-value" id="r-name">—</div>
+      </div>
+      <div class="ps-divider"></div>
+      <div class="ps-item">
+        <div class="ps-label">Age</div>
+        <div class="ps-value" id="r-age">—</div>
+      </div>
+      <div class="ps-divider"></div>
+      <div class="ps-item">
+        <div class="ps-label">Sex</div>
+        <div class="ps-value" id="r-sex">—</div>
+      </div>
+      <div class="ps-divider"></div>
+      <div class="ps-item">
+        <div class="ps-label">Weight</div>
+        <div class="ps-value" id="r-weight">—</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+
+      <!-- Left: Diagnosis -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 4a.75.75 0 00-1.5 0v3.25L5.22 9.22a.75.75 0 001.06 1.06L8 8.56l1.72 1.72a.75.75 0 001.06-1.06L8.75 7.5V5z"/>
+          </svg>
+          Diagnosis
+        </div>
+
+        <!-- Result hero -->
+        <div class="result-hero" id="result-hero">
+          <div class="result-badge" id="result-badge">🩻</div>
+          <div class="result-text">
+            <div class="result-name" id="result-name">—</div>
+            <div class="result-desc" id="result-desc">—</div>
+          </div>
+          <div class="result-confidence">
+            <div class="confidence-ring">
+              <svg viewBox="0 0 64 64" width="64" height="64">
+                <circle class="ring-bg" cx="32" cy="32" r="28"/>
+                <circle class="ring-fill" id="ring-fill" cx="32" cy="32" r="28"/>
+              </svg>
+              <div class="confidence-pct" id="conf-pct">—</div>
+            </div>
+            <div class="confidence-label">Confidence</div>
+          </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="recommendation" id="recommendation">
+          <div class="rec-icon" id="rec-icon">💊</div>
+          <div class="rec-text" id="rec-text">—</div>
+        </div>
+
+        <!-- Reset -->
+        <div style="margin-top: 20px;">
+          <button class="reset-btn" id="reset-btn">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M1 7a6 6 0 106-6H4m0 0L2 1m2 0L2 3"/>
+            </svg>
+            New Analysis
+          </button>
+        </div>
+      </div>
+
+      <!-- Right: Probability breakdown -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2 12h2v2H2v-2zm3-4h2v6H5V8zm3-4h2v10H8V4zm3-2h2v12h-2V2z"/>
+          </svg>
+          Class Probabilities
+        </div>
+
+        <div class="prob-section">
+          <div class="prob-row">
+            <div class="prob-label">✅ Normal</div>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill" id="bar-normal" style="background: var(--success);"></div>
+            </div>
+            <div class="prob-pct" id="pct-normal">0.0%</div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-label">⚠ Osteopenia</div>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill" id="bar-osteopenia" style="background: var(--warning);"></div>
+            </div>
+            <div class="prob-pct" id="pct-osteopenia">0.0%</div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-label">🔴 Osteoporosis</div>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill" id="bar-osteoporosis" style="background: var(--danger);"></div>
+            </div>
+            <div class="prob-pct" id="pct-osteoporosis">0.0%</div>
+          </div>
+        </div>
+
+        <!-- X-ray preview in results -->
+        <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--card-border);">
+          <img id="result-img" src="" alt="X-ray" style="width:100%; max-height:180px; object-fit:cover; display:block; filter: grayscale(20%) contrast(1.15);" />
+        </div>
+        <div style="font-family:'DM Mono',monospace; font-size:10px; color:var(--slate-dim); margin-top:6px; text-align:center; letter-spacing:1px;">
+          KNEE X-RAY · AI PROCESSED · 224×224
+        </div>
+      </div>
+
+    </div><!-- /two-col results -->
+  </div><!-- /results-panel -->
+
+  <div class="disclaimer fade-in fade-in-5">
+    ⚕ This tool is intended for research and educational purposes only. Results are generated by an AI model and must not replace clinical diagnosis. Always consult a qualified medical professional for health decisions.
+  </div>
+
+</div><!-- /wrapper -->
+
+<script>
+  const CLASS_INFO = {
+    Normal: {
+      cls: 'normal',
+      emoji: '✅',
+      desc: 'Bone density appears within normal range. No significant degenerative changes detected.',
+      rec: '<strong>Routine Follow-up Recommended.</strong> Maintain bone health through calcium-rich diet, weight-bearing exercise, and regular check-ups every 2 years.',
+      recIcon: '💚',
+      ringColor: '#00e89c',
+    },
+    Osteopenia: {
+      cls: 'osteopenia',
+      emoji: '⚠',
+      desc: 'Mild reduction in bone mineral density detected. Below normal, but not yet at osteoporosis threshold.',
+      rec: '<strong>Medical Consultation Advised.</strong> Consult your physician. Lifestyle modifications including vitamin D supplementation and weight-bearing exercise are recommended.',
+      recIcon: '⚠',
+      ringColor: '#ffc14d',
+    },
+    Osteoporosis: {
+      cls: 'osteoporosis',
+      emoji: '🔴',
+      desc: 'Significant bone density loss detected. High risk of fractures and bone fragility.',
+      rec: '<strong>Immediate Medical Attention Required.</strong> Please consult a specialist promptly. Pharmacological treatment options including bisphosphonates may be indicated. Fall prevention measures are essential.',
+      recIcon: '🏥',
+      ringColor: '#ff5f6d',
+    },
+  };
+
+  // DOM refs
+  const fileInput    = document.getElementById('file-input');
+  const uploadZone   = document.getElementById('upload-zone');
+  const previewWrap  = document.getElementById('preview-wrap');
+  const previewImg   = document.getElementById('preview-img');
+  const previewLabel = document.getElementById('preview-label');
+  const analyseBtn   = document.getElementById('analyse-btn');
+  const btnSpinner   = document.getElementById('btn-spinner');
+  const btnIcon      = document.getElementById('btn-icon');
+  const errorMsg     = document.getElementById('error-msg');
+  const formSection  = document.getElementById('form-section');
+  const resultsPanel = document.getElementById('results-panel');
+  const scanOverlay  = document.getElementById('scan-overlay');
+  const scanMsg      = document.getElementById('scan-msg');
+  const resetBtn     = document.getElementById('reset-btn');
+
+  let uploadedFile = null;
+
+  function getApiBaseUrl() {
+    return window.location.protocol === 'file:'
+      ? 'http://127.0.0.1:5000'
+      : window.location.origin;
+  }
+
+  function buildPayload() {
+    const payload = new FormData();
+    ['name', 'age', 'sex', 'weight', 'notes'].forEach((id) => {
+      payload.append(id, document.getElementById(id).value);
+    });
+    payload.append('image', uploadedFile, uploadedFile.name);
+    return payload;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[char]));
+  }
+
+  function setLoadingState(isLoading) {
+    analyseBtn.disabled = isLoading || !uploadedFile;
+    btnSpinner.style.display = isLoading ? 'block' : 'none';
+    btnIcon.style.display = isLoading ? 'none' : 'block';
+  }
+
+  // ── FILE SELECTION ─────────────────────────────────────
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    handleFile(file);
+  });
+
+  // Drag & drop
+  uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', ()  => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  function handleFile(file) {
+    uploadedFile = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewWrap.style.display = 'block';
+    previewLabel.textContent = file.name.toUpperCase() + ' · READY FOR ANALYSIS';
+    updateBtnState();
+    setStepActive(2);
+  }
+
+  // ── FORM CHANGE → ENABLE BUTTON ────────────────────────
+  ['name','age','sex','weight'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateBtnState);
+    document.getElementById(id).addEventListener('change', updateBtnState);
+  });
+
+  function updateBtnState() {
+    const ready = uploadedFile &&
+      document.getElementById('name').value.trim() &&
+      document.getElementById('age').value &&
+      document.getElementById('sex').value &&
+      document.getElementById('weight').value;
+    analyseBtn.disabled = !ready;
+  }
+
+  // ── STEP PROGRESS ──────────────────────────────────────
+  function setStepActive(step) {
+    for (let i = 1; i <= 4; i++) {
+      const circle = document.getElementById(`step-${i}-circle`);
+      const label  = document.getElementById(`step-${i}-label`);
+      if (i < step) {
+        circle.className = 'step-circle done';
+        label.className  = 'step-label done';
+        circle.textContent = '✓';
+        const line = document.getElementById(`line-${i}`);
+        if (line) line.classList.add('done');
+      } else if (i === step) {
+        circle.className = 'step-circle active';
+        label.className  = 'step-label active';
+        circle.textContent = i;
+      } else {
+        circle.className = 'step-circle';
+        label.className  = 'step-label';
+        circle.textContent = i;
+      }
+    }
+  }
+
+  // ── VALIDATION ─────────────────────────────────────────
+  function validate() {
+    const name   = document.getElementById('name').value.trim();
+    const age    = parseInt(document.getElementById('age').value);
+    const sex    = document.getElementById('sex').value;
+    const weight = parseFloat(document.getElementById('weight').value);
+
+    if (!name) return 'Please enter the patient name.';
+    if (!age || age < 1 || age > 120) return 'Please enter a valid age (1–120).';
+    if (!sex) return 'Please select biological sex.';
+    if (!weight || weight < 1 || weight > 300) return 'Please enter a valid weight (1–300 kg).';
+    if (!uploadedFile) return 'Please upload a knee X-ray image.';
+    return null;
+  }
+
+  // ── ANALYSE ────────────────────────────────────────────
+  analyseBtn.addEventListener('click', async () => {
+    errorMsg.style.display = 'none';
+    const err = validate();
+    if (err) { errorMsg.textContent = err; errorMsg.style.display = 'block'; return; }
+
+    setStepActive(3);
+    scanOverlay.classList.add('active');
+    setLoadingState(true);
+
+    // Simulate analysis messages
+    const msgs = ['LOADING MODEL', 'PREPROCESSING IMAGE', 'RUNNING DENSENET121', 'CLASSIFYING FEATURES', 'GENERATING REPORT'];
+    let mi = 0;
+    const msgInterval = setInterval(() => {
+      scanMsg.textContent = msgs[Math.min(mi++, msgs.length - 1)];
+    }, 700);
+
+    // Simulate model inference delay (in production: replace with real API call)
+    await new Promise(r => setTimeout(r, 3500));
+
+    clearInterval(msgInterval);
+    scanOverlay.classList.remove('active');
+
+    // ──────────────────────────────────────────────────────
+    // DEMO PREDICTION — replace this block with your real
+    // Flask/FastAPI endpoint call to get actual model output
+    // ──────────────────────────────────────────────────────
+    const demoClasses  = ['Normal', 'Osteopenia', 'Osteoporosis'];
+    const demoProbs    = [0.12, 0.58, 0.30];  // example probabilities
+    const topIdx       = demoProbs.indexOf(Math.max(...demoProbs));
+    const label        = demoClasses[topIdx];
+    const confidence   = demoProbs[topIdx];
+    // ──────────────────────────────────────────────────────
+
+    displayResults(label, confidence, demoProbs);
+  });
+
+  // ── DISPLAY RESULTS ────────────────────────────────────
+  function displayResults(label, confidence, probs) {
+    const info = CLASS_INFO[label];
+    const classes = ['Normal', 'Osteopenia', 'Osteoporosis'];
+    const probIds  = ['normal', 'osteopenia', 'osteoporosis'];
+
+    // Patient strip
+    document.getElementById('r-name').textContent   = document.getElementById('name').value.trim();
+    document.getElementById('r-age').textContent    = document.getElementById('age').value + ' yrs';
+    document.getElementById('r-sex').textContent    = document.getElementById('sex').value;
+    document.getElementById('r-weight').textContent = document.getElementById('weight').value + ' kg';
+
+    // Hero
+    const hero = document.getElementById('result-hero');
+    const badge = document.getElementById('result-badge');
+    hero.className   = 'result-hero ' + info.cls;
+    badge.className  = 'result-badge ' + info.cls;
+    badge.textContent = info.emoji;
+
+    document.getElementById('result-name').textContent  = label;
+    document.getElementById('result-name').className    = 'result-name ' + info.cls;
+    document.getElementById('result-desc').textContent  = info.desc;
+
+    // Ring
+    const pct = Math.round(confidence * 100);
+    const circumference = 175.9;
+    const offset = circumference - (pct / 100) * circumference;
+    const ring = document.getElementById('ring-fill');
+    ring.style.stroke = info.ringColor;
+    document.getElementById('conf-pct').textContent = pct + '%';
+    setTimeout(() => { ring.style.strokeDashoffset = offset; }, 100);
+
+    // Recommendation
+    const rec = document.getElementById('recommendation');
+    rec.className = 'recommendation ' + info.cls;
+    document.getElementById('rec-icon').textContent = info.recIcon;
+    document.getElementById('rec-text').innerHTML   = info.rec;
+
+    // Probability bars
+    probs.forEach((p, i) => {
+      const barId = 'bar-' + probIds[i];
+      const pctId = 'pct-' + probIds[i];
+      setTimeout(() => {
+        document.getElementById(barId).style.width = (p * 100).toFixed(1) + '%';
+        document.getElementById(pctId).textContent = (p * 100).toFixed(1) + '%';
+      }, 200 + i * 100);
+    });
+
+    // Copy X-ray to result
+    document.getElementById('result-img').src = previewImg.src;
+
+    // Show results, hide form
+    setStepActive(4);
+    formSection.style.display  = 'none';
+    resultsPanel.style.display = 'block';
+    resultsPanel.classList.add('fade-in');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── RESET ──────────────────────────────────────────────
+  resetBtn.addEventListener('click', () => {
+    uploadedFile = null;
+    fileInput.value = '';
+    previewWrap.style.display = 'none';
+    previewImg.src = '';
+    ['name','age','sex','weight','notes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el.tagName === 'SELECT') el.selectedIndex = 0;
+      else el.value = '';
+    });
+    errorMsg.style.display = 'none';
+    analyseBtn.disabled = true;
+
+    // Reset ring
+    document.getElementById('ring-fill').style.strokeDashoffset = 175.9;
+
+    // Reset bars
+    ['normal','osteopenia','osteoporosis'].forEach(id => {
+      document.getElementById('bar-' + id).style.width = '0%';
+      document.getElementById('pct-' + id).textContent = '0.0%';
+    });
+
+    setStepActive(1);
+    resultsPanel.style.display = 'none';
+    formSection.style.display  = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+</script>
+</body>
+</html>
+
